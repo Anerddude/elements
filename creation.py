@@ -19,9 +19,9 @@ class Element:
         )
         result_element = Element(response.text)
         if result_element.name not in [i.name in Element.data.keys()]:
-            Element.data[self].append(result_element)
-            Element.data[other].append(result_element)
-            Element.data[result_element] = []
+            Element.data[self.name].append(result_element.name)
+            Element.data[other.name].append(result_element.name)
+            Element.data[result_element.name] = []
         return result_element
 
 #Basic Elements:
@@ -30,14 +30,14 @@ fire = Element("fire")
 water = Element("fire")
 air = Element("air")
 
-Element.data[stone] = []
-Element.data[air] = []
-Element.data[fire] = []
-Element.data[water] = []
+Element.data["stone"] = []
+Element.data["air"] = []
+Element.data["fire"] = []
+Element.data["water"] = []
 
 l = [stone, fire, water, air]
 for i in l:
     for j in l:
         var = i + j
 
-print([i.name for i in Element.data.keys()])
+print(Element.data)
