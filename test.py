@@ -1,24 +1,23 @@
-import requests
+#Database
+G = nx.Graph(Element.data)
+driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", "password"))
+def save_to_neo4j(tx):
+    tx.run("MATCH (n) DETACH DELETE n")
+    for node in G.nodes():
+        tx.run("MERGE (n:Node {name: $name})", name=node)
+    for (u, v) in G.edges():
+        tx.run("""
+            MATCH (a:Node {name: $u})
+            MATCH (b:Node {name: $v})
+            MERGE (a)-[:CONNECTED_TO]->(b)
+        """, u=u, v=v)
 
-# Define the API endpoint and model
-OLLAMA_API_URL = "http://localhost:11434/api/generate"
-MODEL_NAME = "deepseek-r1:1.5b"
+with driver.session() as session:
+    session.write_transaction(save_to_neo4j)
 
-# Define your prompt
-prompt = "Explain quantum computing in simple terms."
+driver.close()
+print("Graph saved to Neo4j!")
 
-# Send a POST request to Ollama
-response = requests.post(
-    OLLAMA_API_URL,
-    json={
-        "model": MODEL_NAME,
-        "prompt": prompt,
-        "stream": False  # Set to True if you want streaming responses
-    }
-)
 
-# Print the response
-if response.status_code == 200:
-    print(response.json()["response"])
-else:
-    print("Error:", response.text)
+nx.draw(G, with_labels=True, node_color='lightblue', edge_color='gray', font_weight='bold')
+plt.savefig("graph.png")

@@ -1,11 +1,10 @@
 #Imports
 import os
-from google import genai
-
-#API KEY and model setup
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-client = genai.Client(api_key=GEMINI_API_KEY)
-
+import requests
+import re
+import networkx as nx
+import matplotlib.pyplot as plt
+from neo4j import GraphDatabase
 
 class Element:
     """ This will hold all of the needed info about the elements and will create new elements as they get dicovered"""
@@ -14,20 +13,43 @@ class Element:
         self.name = name
     def __add__(self, other):
         elements_names = self.name + " " + other.name
-        response = client.models.generate_content(
-        model="gemini-2.5-flash", contents=f"in a single word, give me the result of merging these 2 things together : {elements_names}"
+        response = requests.post(
+            "http://localhost:11434/api/generate",
+            json={
+                "model": "phi3:3.8b",
+                "prompt": f"""
+                            You are a creative entities combiner. 
+                            Generate a name for the combination of the entities included in this prompt. 
+                            Your response should only include the generated name.
+                            Elements : {elements_names}.
+                            new element : 
+                        """,
+                "stream": False
+            }
         )
-        result_element = Element(response.text)
-        if result_element.name not in [i.name in Element.data.keys()]:
-            Element.data[self.name].append(result_element.name)
-            Element.data[other.name].append(result_element.name)
-            Element.data[result_element.name] = []
-        return result_element
+        if response.status_code == 200:
+            try:
+                response_text = response.json()["response"].strip()
+                match = re.search(r"(\w+)", response_text)
+                if not match:
+                    result = response_text.split()[0] if response_text else "unknown"
+                else:
+                    result = match.group(1)
+                result_element = Element(result)
+                if result_element.name.lower() not in [i.lower() for i in Element.data.keys()]:
+                    Element.data[self.name].append(result_element.name)
+                    Element.data[other.name].append(result_element.name)
+                    Element.data[result_element.name] = []
+                    return result_element
+            except (KeyError, AttributeError) as e:
+                print(f"Error processing response: {e}")
+                print(f"Response was: {response.text}")
+                return Element("unknown")
 
 #Basic Elements:
 stone = Element("stone")
 fire = Element("fire")
-water = Element("fire")
+water = Element("water")
 air = Element("air")
 
 Element.data["stone"] = []
@@ -35,9 +57,11 @@ Element.data["air"] = []
 Element.data["fire"] = []
 Element.data["water"] = []
 
-l = [stone, fire, water, air]
-for i in l:
-    for j in l:
-        var = i + j
+var_1 = water + fire
+var_2 = stone + fire
+var_3 = fire + air
+var_14 = water + water
+var_5 = stone + water
+var_6 = fire + water
 
 print(Element.data)
