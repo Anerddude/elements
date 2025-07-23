@@ -3,6 +3,7 @@ from ollama import chat
 from ollama import ChatResponse
 import networkx as nx
 import matplotlib.pyplot as plt
+from neo4j import GraphDatabase
 
 def draw_parent_child_graph(parent_child_dict, output_file="parent_child_graph.png"):
     """This function will be used to visualize the parent-child relationship between the 
@@ -96,5 +97,23 @@ var_1_4 = var_1 + var_2
 
 
 print(Element.data)
-
 draw_parent_child_graph(Element.data)
+
+def save_to_neo4j(parent_child_dict, uri, user, password):
+    driver = GraphDatabase.driver(uri, auth=(user, password))
+    
+    def create_relationship(tx, parent, child):
+        tx.run("MERGE (p:Person {name: $parent}) "
+               "MERGE (c:Person {name: $child}) "
+               "MERGE (p)-[:PARENT_OF]->(c)",
+               parent=parent, child=child)
+    
+    with driver.session() as session:
+        for child, parents in parent_child_dict.items():
+            for parent_tuple in parents:
+                for parent in parent_tuple:
+                    session.execute_write(create_relationship, parent, child)
+    
+    driver.close()
+
+save_to_neo4j(Element.data, "neo4j://localhost:7687", "neo4j", "bahboha12")
